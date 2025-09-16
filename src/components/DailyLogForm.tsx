@@ -10,11 +10,12 @@ import { supabase } from '@/integrations/supabase/client';
 interface DailyLogFormProps {
   userId: string;
   shedId: string;
+  shedName?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-const DailyLogForm: React.FC<DailyLogFormProps> = ({ userId, shedId, onSuccess, onCancel }) => {
+const DailyLogForm: React.FC<DailyLogFormProps> = ({ userId, shedId, shedName, onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
     log_date: new Date().toISOString().slice(0,10),
     alive_count: '',
@@ -34,18 +35,28 @@ const DailyLogForm: React.FC<DailyLogFormProps> = ({ userId, shedId, onSuccess, 
     e.preventDefault();
     setIsLoading(true);
     try {
-      const { error } = await supabase.from('daily_logs').insert({
-        user_id: userId,
-        shed_id: shedId,
-        log_date: formData.log_date,
-        alive_count: formData.alive_count ? parseInt(formData.alive_count) : null,
-        dead_count: formData.dead_count ? parseInt(formData.dead_count) : null,
-        death_reason: formData.death_reason || null,
-        eggs_count: formData.eggs_count ? parseInt(formData.eggs_count) : null,
-        offspring_count: formData.offspring_count ? parseInt(formData.offspring_count) : null
-      });
+      const deadCountNum = formData.dead_count ? parseInt(formData.dead_count) : 0;
+      const { error } = await supabase
+        .from('daily_logs')
+        .upsert({
+          user_id: userId,
+          shed_id: shedId,
+          log_date: formData.log_date,
+          alive_count: formData.alive_count ? parseInt(formData.alive_count) : null,
+          dead_count: formData.dead_count ? parseInt(formData.dead_count) : null,
+          death_reason: formData.death_reason || null,
+          eggs_count: formData.eggs_count ? parseInt(formData.eggs_count) : null,
+          offspring_count: formData.offspring_count ? parseInt(formData.offspring_count) : null
+        }, { onConflict: 'user_id,shed_id,log_date' });
       if (error) throw error;
       toast({ title: 'Daily Log Saved', description: 'Your daily shed log has been recorded.' });
+      if (deadCountNum > 15) {
+        toast({
+          title: 'High Mortality Risk',
+          description: `${shedName ? shedName + ' ' : ''}reported ${deadCountNum} deaths today.`,
+          variant: 'destructive'
+        });
+      }
       onSuccess();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to save log', variant: 'destructive' });

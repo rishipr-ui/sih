@@ -27,7 +27,8 @@ const ShedForm: React.FC<ShedFormProps> = ({ shed, userId, onSuccess, onCancel, 
     current_birds: shed?.current_birds?.toString() || '0',
     age_days: shed?.age_days?.toString() || '',
     vaccinated: (shed?.vaccinated ?? false) ? 'yes' : 'no',
-    last_vaccination_date: shed?.last_vaccination_date || ''
+    last_vaccination_date: shed?.last_vaccination_date || '',
+    start_date: (shed as any)?.start_date || ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -44,14 +45,20 @@ const ShedForm: React.FC<ShedFormProps> = ({ shed, userId, onSuccess, onCancel, 
     setIsLoading(true);
 
     try {
+      // If start_date is provided and age_days empty, derive age_days
+      const derivedAgeDays = (!formData.age_days && formData.start_date)
+        ? Math.max(0, Math.floor((new Date().getTime() - new Date(formData.start_date).getTime()) / (1000 * 60 * 60 * 24)))
+        : undefined;
+
       const shedData = {
         name: formData.name,
         location: formData.location || null,
         capacity: formData.capacity ? parseInt(formData.capacity) : null,
         current_birds: parseInt(formData.current_birds) || 0,
-        age_days: formData.age_days ? parseInt(formData.age_days) : null,
+        age_days: formData.age_days ? parseInt(formData.age_days) : (derivedAgeDays ?? null),
         vaccinated: formData.vaccinated === 'yes',
         last_vaccination_date: formData.last_vaccination_date || null,
+        start_date: formData.start_date || null,
         user_id: userId
       };
 

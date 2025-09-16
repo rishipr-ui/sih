@@ -55,27 +55,49 @@ const Register = () => {
       }
 
       if (authData.user) {
-        // Upsert profile with farm information keyed by user_id
+        // Insert profile with farm information
         const { error: profileError } = await supabase
           .from('profiles')
-          .upsert({
+          .insert({
             user_id: authData.user.id,
             full_name: formData.farmerName,
             farm_area: formData.farmArea,
             farm_location: formData.farmLocation,
             budget: formData.budget,
-            animal_type: formData.animalType
-          }, { onConflict: 'user_id' });
+            animal_type: formData.animalType,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
 
         if (profileError) {
-          console.error('Profile update error:', profileError);
+          console.error('Profile creation error:', profileError);
+          // Don't throw here as the user was created successfully
+          // We can try to update the profile instead if it already exists
+          if ((profileError as any).code === '23505') { // Unique violation
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                full_name: formData.farmerName,
+                farm_area: formData.farmArea,
+                farm_location: formData.farmLocation,
+                budget: formData.budget,
+                animal_type: formData.animalType,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', authData.user.id);
+              
+            if (updateError) {
+              console.error('Profile update error:', updateError);
+            }
+          }
         }
 
         toast({
           title: "Registration Successful!",
           description: "Welcome to AgroWatch! Your farm profile has been created.",
         });
-        navigate('/dashboard');
+        // Add a small delay to ensure the profile is created before navigating
+        setTimeout(() => navigate('/dashboard'), 500);
       }
     } catch (error: any) {
       toast({

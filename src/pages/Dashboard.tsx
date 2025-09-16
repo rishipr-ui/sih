@@ -23,13 +23,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import ShedForm from '@/components/ShedForm';
 import DailyLogForm from '@/components/DailyLogForm';
+
 import MortalityRateChart from '@/components/MortalityRateChart';
+import ProductionChart from '@/components/ProductionChart';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<{ full_name: string | null; farm_area: string | null; farm_location: string | null; budget: string | null; animal_type: string | null } | null>(null);
-  const [sheds, setSheds] = useState<Array<{ id: string; name: string; location: string | null; capacity: number | null; current_birds: number | null; status: string | null; age_days: number | null; vaccinated: boolean | null; last_vaccination_date: string | null }>>([]);
+  const [sheds, setSheds] = useState<Array<{ id: string; name: string; location: string | null; capacity: number | null; current_birds: number | null; status: string | null; age_days: number | null; vaccinated: boolean | null; last_vaccination_date: string | null; start_date: string | null }>>([]);
   const [dailyLogs, setDailyLogs] = useState<Array<{ alive_count: number | null; dead_count: number | null; eggs_count: number | null; offspring_count: number | null }>>([]);
   const [showShedForm, setShowShedForm] = useState(false);
   const [editingShedId, setEditingShedId] = useState<string | null>(null);
@@ -80,7 +82,7 @@ const Dashboard = () => {
     // Fetch sheds
     const { data: shedsData } = await supabase
       .from('sheds')
-      .select('id,name,location,capacity,current_birds,status,age_days,vaccinated,last_vaccination_date')
+      .select('id,name,location,capacity,current_birds,status,age_days,vaccinated,last_vaccination_date,start_date')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     setSheds(shedsData ?? []);
@@ -114,6 +116,7 @@ const Dashboard = () => {
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'health', label: 'Health Management', icon: Heart },
     { id: 'guidelines', label: 'Guidelines', icon: FileText },
+    { id: 'policies', label: 'Government Policies', icon: FileText },
     { id: 'visitors', label: 'Visitor Management', icon: Users },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
   ];
@@ -271,7 +274,15 @@ const Dashboard = () => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-muted-foreground">Age (days):</span>
-                          <span className="text-sm text-foreground">{shed.age_days ?? '-'}</span>
+                          <span className="text-sm text-foreground">
+                            {(() => {
+                              if (shed.start_date) {
+                                const days = Math.max(0, Math.floor((new Date().getTime() - new Date(shed.start_date).getTime()) / (1000*60*60*24)));
+                                return days;
+                              }
+                              return shed.age_days ?? '-';
+                            })()}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-muted-foreground">Vaccinated:</span>
@@ -336,9 +347,7 @@ const Dashboard = () => {
                   <CardTitle className="text-foreground">Production Analytics</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64 flex items-center justify-center text-muted-foreground">
-                    Chart.js Production Graph
-                  </div>
+                  <ProductionChart />
                 </CardContent>
               </Card>
             </div>
@@ -407,6 +416,106 @@ const Dashboard = () => {
                       </div>
                     );
                   })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 'guidelines':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-foreground">Guidelines</h2>
+
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-foreground">Farm Management Guidelines</CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Paste or write your best practices, SOPs, and references here
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Overview</p>
+                  <div className="min-h-24 p-4 border border-border rounded-md text-sm text-muted-foreground">
+                    Add a short introduction to your farm guidelines...
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Daily Operations</p>
+                  <div className="min-h-24 p-4 border border-border rounded-md text-sm text-muted-foreground">
+                    List daily tasks, checklists, and routines...
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Biosecurity</p>
+                  <div className="min-h-24 p-4 border border-border rounded-md text-sm text-muted-foreground">
+                    Describe PPE, sanitation, visitor logs, and isolation protocols...
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Feeding & Nutrition</p>
+                  <div className="min-h-24 p-4 border border-border rounded-md text-sm text-muted-foreground">
+                    Add feed schedules and age-specific requirements...
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Vaccination & Health</p>
+                  <div className="min-h-24 p-4 border border-border rounded-md text-sm text-muted-foreground">
+                    Include vaccination timelines and health monitoring steps...
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Useful Links</p>
+                  <ul className="list-disc pl-5 text-sm text-primary">
+                    <li><a href="#" target="_blank" rel="noreferrer">Add official guideline link</a></li>
+                    <li><a href="#" target="_blank" rel="noreferrer">Add subsidy/support link</a></li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 'policies':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-foreground">Government Policies</h2>
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-foreground">Compliance and Support Programs</CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Key regulations, subsidies, and reporting requirements for smallholder farms
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="p-4 border border-border rounded-lg">
+                    <h4 className="font-semibold text-foreground mb-1">Biosecurity & Animal Health</h4>
+                    <p className="text-sm text-muted-foreground">Vaccination schedules, movement permits, and record-keeping standards.</p>
+                    <div className="mt-2 text-sm">
+                      <a className="text-primary hover:underline" href="#" target="_blank" rel="noreferrer">Official Biosecurity Guidelines</a>
+                    </div>
+                  </div>
+                  <div className="p-4 border border-border rounded-lg">
+                    <h4 className="font-semibold text-foreground mb-1">Subsidies & Grants</h4>
+                    <p className="text-sm text-muted-foreground">Feed subsidies, vaccination drives, and infrastructure support.</p>
+                    <div className="mt-2 text-sm">
+                      <a className="text-primary hover:underline" href="#" target="_blank" rel="noreferrer">Current Subsidy Programs</a>
+                    </div>
+                  </div>
+                  <div className="p-4 border border-border rounded-lg">
+                    <h4 className="font-semibold text-foreground mb-1">Reporting & Compliance</h4>
+                    <p className="text-sm text-muted-foreground">Outbreak reporting, mortality logs, and audit preparation.</p>
+                    <div className="mt-2 text-sm">
+                      <a className="text-primary hover:underline" href="#" target="_blank" rel="noreferrer">Mandatory Reporting Portal</a>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
